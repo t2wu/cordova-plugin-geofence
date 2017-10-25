@@ -8,6 +8,7 @@
 import Foundation
 import AudioToolbox
 import WebKit
+import UserNotifications
 
 let TAG = "GeofencePlugin"
 let iOS8 = floor(NSFoundationVersionNumber) > floor(NSFoundationVersionNumber_iOS_7_1)
@@ -153,8 +154,8 @@ func log(_ messages: [String]) {
         log("didReceiveLocalNotification")
         if UIApplication.shared.applicationState != UIApplicationState.active {
             var data = "undefined"
-            if let uiNotification = notification.object as? UILocalNotification {
-                if let notificationData = uiNotification.userInfo?["geofence.notification.data"] as? String {
+            if let uiNotification = notification.object as? UNNotificationRequest {
+                if let notificationData = uiNotification.content.userInfo["geofence.notification.data"] as? String {
                     data = notificationData
                 }
                 let js = "setTimeout('geofence.onNotificationClicked(" + data + ")',0)"
@@ -401,21 +402,26 @@ class GeoNotificationManager : NSObject, CLLocationManagerDelegate {
 
     func notifyAbout(_ geo: JSON) {
         log("Creating notification")
-        let notification = UILocalNotification()
-        notification.timeZone = TimeZone.current
-        let dateTime = Date()
-        notification.fireDate = dateTime
-        notification.soundName = UILocalNotificationDefaultSoundName
-        notification.alertBody = geo["notification"]["text"].stringValue
-        notification.alertTitle = geo["notification"]["title"].stringValue
+        let content = UNMutableNotificationContent()
+        content.title = geo["notification"]["text"].stringValue;
+        content.body = geo["notification"]["title"].stringValue;
+        content.sound = UNNotificationSound.default();
         if let json = geo["notification"]["data"] as JSON? {
-            notification.userInfo = ["geofence.notification.data": json.rawString(String.Encoding.utf8.rawValue, options: [])!]
+            content.userInfo = ["geofence.notification.data": json.rawString(String.Encoding.utf8.rawValue, options: [])!]
         }
-        UIApplication.shared.scheduleLocalNotification(notification)
+
+        let request = UNNotificationRequest(identifier: geo["notification"]["id"].stringValue, content: content, trigger:nil)
 
         if let vibrate = geo["notification"]["vibrate"].array {
             if (!vibrate.isEmpty && vibrate[0].intValue > 0) {
                 AudioServicesPlayAlertSound(SystemSoundID(kSystemSoundID_Vibrate))
+            }
+        }
+        
+        let center = UNUserNotificationCenter.current()
+        center.add(request) { (error : Error?) in
+            if let theError = error {
+                print(theError.localizedDescription)
             }
         }
     }
