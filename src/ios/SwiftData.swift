@@ -23,7 +23,7 @@
 
 import Foundation
 import UIKit
-
+import SQLite3
 
 // MARK: - SwiftData
 public struct SwiftData {
