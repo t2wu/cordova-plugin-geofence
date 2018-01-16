@@ -233,6 +233,9 @@ class GeoNotificationManager : NSObject, CLLocationManagerDelegate {
         super.init()
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(timHacklocationManagerEnterRegion(notification:)), name: NSNotification.Name(rawValue: "TimHackEnterRegion"), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(timHacklocationManagerExitRegion(notification:)), name: NSNotification.Name(rawValue: "TimHackExitRegion"), object: nil)
     }
 
     func registerPermissions() {
@@ -347,6 +350,21 @@ class GeoNotificationManager : NSObject, CLLocationManagerDelegate {
             log("Stoping monitoring region \(region.identifier)")
             locationManager.stopMonitoring(for: region)
         }
+    }
+    
+    // Event sent from beacon plugin
+    func timHacklocationManagerEnterRegion(notification: Notification) {
+        let dic = notification.object as! Dictionary<String, Any>;
+        let manager = dic["manager"] as! CLLocationManager;
+        let region = dic["region"] as! CLRegion;
+        locationManager(manager, didEnterRegion: region)
+    }
+    
+    func timHacklocationManagerExitRegion(notification: Notification) {
+        let dic = notification.object as! Dictionary<String, Any>;
+        let manager = dic["manager"] as! CLLocationManager;
+        let region = dic["region"] as! CLRegion;
+        locationManager(manager, didExitRegion: region)
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
